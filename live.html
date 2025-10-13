@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Box Simulation - PyScript</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link rel="stylesheet" href="live.css">
+
+</head>
+<body>
+    <header>
+        <div class="logo">Molecular Dynamics</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="main.html">Simulations</a>
+            <a href="live.html">Live</a>
+        </nav>
+    </header>
+    <div id="container">
+        <h1>Particle Box Simulation</h1>
+        <div id="params-box">
+            <div>
+                <label for="input-N">N</label>
+                <input title='N' type="number" id="input-N" value="120" min="10" max="500">
+            </div>
+ 
+            <div>
+                <label for="input-K">K</label>
+                <input type="number" id="input-K" value="1.0">
+            </div>
+
+            <div>
+                <label for="input-r0">r0</label>
+                <input type="number" id="input-r0" value="0.8">
+            </div>
+
+            <div>
+                <label for="input-rc">rc</label>
+                <input type="number" id="input-rc" value="1.0">
+            </div>
+
+            <div>
+                <label for="input-dt">dt</label>
+                <input type="number" id="input-dt" value="0.1">
+            </div>
+
+            <div>
+                <label for="input-L">L</label>
+                <input type="number" id="input-L" value="10.0">
+            </div>
+
+            <div>
+                <label for="input-V">V</label>
+                <input type="number" id="input-V" value="1">
+            </div>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="simCanvas" width="400" height="400"></canvas>
+            <canvas id="graphCanvas" width="400" height="400"></canvas>
+        </div>
+        <div id="controls">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn">Stop</button>
+            <button id="restartBtn">Restart</button>
+        </div>
+        <div id="stats">
+            <div class="stat-box">
+                <div class="stat-label">KE (Std)</div>
+                <div class="stat-value" id="ke-value">0.00 J</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">PE (Std)</div>
+                <div class="stat-value" id="pe-value">0.00 J</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">TE (Std)</div>
+                <div class="stat-value" id="te-value">0.00 J</div>
+            </div>
+        </div>
+        <div id="stats">
+                <div class="stat-box">
+                <div class="stat-label">KE </div>
+                <div class="stat-value" id="ke-value_a">0.00 J</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">PE </div>
+                <div class="stat-value" id="pe-value_a">0.00 J</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">TE </div>
+                <div class="stat-value" id="te-value_a">0.00 J</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="py" config='{"packages": ["numpy"]}'>
+import numpy as np
+from js import document, requestAnimationFrame, window
+from pyodide.ffi import create_proxy
+
+L = 10.0
+box_px = 400
+scale = box_px / L
+
+k = 1.0
+r0 = 0.8
+rc = 1.0
+dt = 0.1
+v = 1.0
+N = 120
+mass = 1.0
+radius = 0.1
+
+sim_canvas = document.getElementById("simCanvas")
+sim_ctx = sim_canvas.getContext("2d")
+graph_canvas = document.getElementById("graphCanvas")
+graph_ctx = graph_canvas.getContext("2d")
+
+running = False
+animation_id = None
+time_elapsed = 0.0
+ke_history = []
+pe_history = []
+te_history = []
+pos = None
+vel = None
+F_prev = None
+
+def read_inputs():
+    global L, k, r0, rc, dt, v, N, scale
+    L = float(document.getElementById("input-L").value)
+    k = float(document.getElementById("input-K").value)
+    r0 = float(document.getElementById("input-r0").value)
+    rc = float(document.getElementById("input-rc").value)
+    dt = float(document.getElementById("input-dt").value)
+    v = float(document.getElementById("input-V").value)
+    N = int(document.getElementById("input-N").value)
+    scale = box_px / L
+
+def init_particles():
+    p = np.random.rand(N, 2) * L
+    vl = np.random.uniform(-v, v, size=(N, 2))
+    return p, vl
+
+def walls_reflect(pos, vel, L, x, y):
+    vel[x, 0] *= -1.0
+    pos[x & (pos[:, 0] < 0.0), 0] = 0.0
+    pos[x & (pos[:, 0] > L), 0] = L
+    vel[y, 1] *= -1.0
+    pos[y & (pos[:, 1] < 0.0), 1] = 0.0
+    pos[y & (pos[:, 1] > L), 1] = L
+
+def pair_forces(pos):
+    d = pos[None, :, :] - pos[:, None, :]
+    r = np.linalg.norm(d, axis=2)
+    mask = (r < rc) & (r > 1e-12)
+    u = d / (r[:, :, None] + 1e-12)
+    fmag = -k * (r - r0) * mask
+    F = np.sum(fmag[:, :, None] * u, axis=1)
+    return F
+
+def detect_collisions(pos, radius, L):
+    d = pos[None, :, :] - pos[:, None, :]
+    d[:, :, 0] = d[:, :, 0] - L * np.round(d[:, :, 0] / L)
+    d[:, :, 1] = d[:, :, 1] - L * np.round(d[:, :, 1] / L)
+    r = np.linalg.norm(d, axis=2)
+    colliding_pairs = np.array(np.where((r < 2 * radius) & (r > 1e-12))).T
+    colliding_pairs = colliding_pairs[colliding_pairs[:,0] < colliding_pairs[:,1]]
+    return colliding_pairs
+
+def resolve_collision(pos, vel, i, j, L):
+    d = pos[i] - pos[j]
+    d[0] = d[0] - L * np.round(d[0] / L)
+    d[1] = d[1] - L * np.round(d[1] / L)
+    dist = np.linalg.norm(d)
+    if dist == 0:
+        return
+    n = d / dist
+    v_i_n = np.dot(vel[i], n)
+    v_j_n = np.dot(vel[j], n)
+    vel[i] += (v_j_n - v_i_n) * n
+    vel[j] += (v_i_n - v_j_n) * n
+
+def step_smooth(pos, vel, mass, dt, L, F_prev):
+    a_prev = F_prev / mass
+    vel = vel + 0.5 * a_prev * dt
+    pos = pos + vel * dt
+    x = (pos[:, 0] < 0) | (pos[:, 0] > L)
+    y = (pos[:, 1] < 0) | (pos[:, 1] > L)
+    walls_reflect(pos, vel, L, x, y)
+    F_new = pair_forces(pos)
+    a_new = F_new / mass
+    vel = vel + 0.5 * a_new * dt
+    x = (pos[:, 0] < 0) | (pos[:, 0] > L)
+    y = (pos[:, 1] < 0) | (pos[:, 1] > L)
+    walls_reflect(pos, vel, L, x, y)
+    return pos, vel, F_new
+
+def step_with_collisions(pos, vel, mass, dt, L, F_prev, radius):
+    pos, vel, F_new = step_smooth(pos, vel, mass, dt, L, F_prev)
+    collisions = detect_collisions(pos, radius, L)
+    for i, j in collisions:
+        resolve_collision(pos, vel, i, j, L)
+    return pos, vel, F_new
+
+def kinetic_energy(vel, mass):
+    return 0.5 * mass * np.sum(vel**2)
+
+def potential_energy(pos, L, k, r0, rc):
+    d = pos[None, :, :] - pos[:, None, :]       
+    d[:, :, 0] = d[:, :, 0] - L * np.round(d[:, :, 0] / L)
+    d[:, :, 1] = d[:, :, 1] - L * np.round(d[:, :, 1] / L)
+    r = np.linalg.norm(d, axis=2)              
+    valid = (r > 1e-12)
+    inside = (r < rc) & valid         
+    U = -0.5 * k * (r - r0)**2 * inside
+    U += (-0.5 * k * (rc - r0)**2) * ((r >= rc) & valid)
+    PE = np.sum(U) / 2.0
+    return PE
+
+def world_to_screen(p):
+    return (int(p[0] * scale), int(p[1] * scale))
+
+def draw_simulation():
+    sim_ctx.fillStyle = "white"
+    sim_ctx.fillRect(0, 0, box_px, box_px)
+    
+    sim_ctx.fillStyle = "rgb(200, 0, 0)"
+    for p in pos:
+        x, y = world_to_screen(p)
+        sim_ctx.beginPath()
+        sim_ctx.arc(x, y, 4, 0, 2 * 3.14159)
+        sim_ctx.fill()
+
+def draw_graph():
+    graph_ctx.fillStyle = "white"
+    graph_ctx.fillRect(0, 0, box_px, box_px)
+    
+    if len(ke_history) < 2:
+        return
+    
+    x_vals = [t for t, _ in ke_history]
+    y_vals = []
+    for t, ke in ke_history:
+        y_vals.append(ke)
+    for t, pe in pe_history:
+        y_vals.append(pe)
+    for t, te in te_history:
+        y_vals.append(te)
+    
+    x_max = max(x_vals)
+    window = 10.0
+    x_min = max(0.0, x_max - window)
+    y_min = min(y_vals) if y_vals else 0
+    y_max = max(y_vals) * 1.1 if y_vals else 1
+    if x_max == x_min:
+        x_max += 1
+    if y_max == y_min:
+        y_max += 1
+    
+    graph_ctx.strokeStyle = "rgb(220, 220, 220)"
+    graph_ctx.lineWidth = 1
+    n_xticks, n_yticks = 5, 5
+    
+    for j in range(n_xticks + 1):
+        t_val = x_min + j * (x_max - x_min) / n_xticks
+        gx = (t_val - x_min) / (x_max - x_min) * box_px
+        graph_ctx.beginPath()
+        graph_ctx.moveTo(gx, 0)
+        graph_ctx.lineTo(gx, box_px)
+        graph_ctx.stroke()
+        
+        graph_ctx.fillStyle = "black"
+        graph_ctx.font = "12px Arial"
+        graph_ctx.fillText(f"{t_val:.1f}s", gx - 15, box_px - 5)
+    
+    for j in range(n_yticks + 1):
+        val = y_min + j * (y_max - y_min) / n_yticks
+        gy = box_px - (val - y_min) / (y_max - y_min) * box_px
+        graph_ctx.beginPath()
+        graph_ctx.moveTo(0, gy)
+        graph_ctx.lineTo(box_px, gy)
+        graph_ctx.stroke()
+        
+        graph_ctx.fillStyle = "black"
+        graph_ctx.fillText(f"{val:.0f}", 5, gy - 5)
+    
+    graph_ctx.strokeStyle = "rgb(255, 0, 0)"
+    graph_ctx.lineWidth = 2
+    graph_ctx.beginPath()
+    for i, (t, ke) in enumerate(ke_history):
+        gx = (t - x_min) / (x_max - x_min) * box_px
+        gy = box_px - (ke - y_min) / (y_max - y_min) * box_px
+        if i == 0:
+            graph_ctx.moveTo(gx, gy)
+        else:
+            graph_ctx.lineTo(gx, gy)
+    graph_ctx.stroke()
+    
+    graph_ctx.strokeStyle = "rgb(0, 0, 255)"
+    graph_ctx.lineWidth = 2
+    graph_ctx.beginPath()
+    for i, (t, pe) in enumerate(pe_history):
+        gx = (t - x_min) / (x_max - x_min) * box_px
+        gy = box_px - (pe - y_min) / (y_max - y_min) * box_px
+        if i == 0:
+            graph_ctx.moveTo(gx, gy)
+        else:
+            graph_ctx.lineTo(gx, gy)
+    graph_ctx.stroke()
+    
+    graph_ctx.strokeStyle = "rgb(0, 180, 0)"
+    graph_ctx.lineWidth = 2
+    graph_ctx.beginPath()
+    for i, (t, te) in enumerate(te_history):
+        gx = (t - x_min) / (x_max - x_min) * box_px
+        gy = box_px - (te - y_min) / (y_max - y_min) * box_px
+        if i == 0:
+            graph_ctx.moveTo(gx, gy)
+        else:
+            graph_ctx.lineTo(gx, gy)
+    graph_ctx.stroke()
+
+def update_stats():
+    if len(ke_history) >= 2:
+        ke_vals = [ke for _, ke in ke_history]
+        pe_vals = [pe for _, pe in pe_history]
+        te_vals = [te for _, te in te_history]
+        
+        ke_std = np.std(ke_vals)
+        pe_std = np.std(pe_vals)
+        te_std = np.std(te_vals)
+        ke = ke_vals[-1]
+        pe = pe_vals[-1]
+        te = te_vals[-1]
+        document.getElementById("ke-value").textContent = f"{ke_std:.4f} J"
+        document.getElementById("pe-value").textContent = f"{pe_std:.4f} J"
+        document.getElementById("te-value").textContent = f"{te_std:.4f} J"
+        document.getElementById("ke-value_a").textContent = f"{ke:.4f} J"
+        document.getElementById("pe-value_a").textContent = f"{pe:.4f} J"
+        document.getElementById("te-value_a").textContent = f"{te:.4f} J"
+
+
+def animate(timestamp):
+    global time_elapsed, ke_history, pe_history, te_history, pos, vel, F_prev
+    
+    if running:
+        if F_prev is None:
+            F_prev = pair_forces(pos)
+        pos, vel, F_prev = step_with_collisions(pos, vel, mass, dt, L, F_prev, radius)
+        time_elapsed += dt
+        ke = kinetic_energy(vel, mass)
+        pe = potential_energy(pos, L, k, r0, rc)
+        te = ke + pe
+        
+        ke_history.append((time_elapsed, ke))
+        pe_history.append((time_elapsed, pe))
+        te_history.append((time_elapsed, te))
+        
+        ke_history = [(t, k) for (t, k) in ke_history if t >= time_elapsed - 10]
+        pe_history = [(t, p) for (t, p) in pe_history if t >= time_elapsed - 10]
+        te_history = [(t, e) for (t, e) in te_history if t >= time_elapsed - 10]
+    
+    draw_simulation()
+    draw_graph()
+    update_stats()
+    
+    requestAnimationFrame(create_proxy(animate))
+
+def start_simulation(event):
+    global running, pos, vel, F_prev
+    if not running:
+        running = True
+        if pos is None:
+            read_inputs()
+            pos, vel = init_particles()
+            F_prev = None
+        requestAnimationFrame(create_proxy(animate))
+
+def stop_simulation(event):
+    global running
+    running = False
+
+def restart_simulation(event):
+    global pos, vel, ke_history, pe_history, te_history, time_elapsed, running, F_prev
+    read_inputs()
+    pos, vel = init_particles()
+    ke_history = []
+    pe_history = []
+    te_history = []
+    time_elapsed = 0.0
+    running = True
+    F_prev = None
+    requestAnimationFrame(create_proxy(animate))
+
+document.getElementById("startBtn").addEventListener("click", create_proxy(start_simulation))
+document.getElementById("stopBtn").addEventListener("click", create_proxy(stop_simulation))
+document.getElementById("restartBtn").addEventListener("click", create_proxy(restart_simulation))
+
+pos, vel = init_particles()
+draw_simulation()
+draw_graph()
+    </script>
+</body>
+</html>

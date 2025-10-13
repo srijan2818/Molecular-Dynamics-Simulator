@@ -1,0 +1,133 @@
+@import url(https://fonts.googleapis.com/css2?family=Varela+Round&display=swap);
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Varela Round', sans-serif;
+      background: linear-gradient(180deg, #050a30, #02224c, #024363);
+      min-height: 100vh;
+      color: #ffffff;
+    }
+
+
+    header {
+      background: rgba(1, 0, 18, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      color: #ffffff;
+      border-radius: 10px;
+    }
+    footer {
+      background: rgba(1, 0, 18, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      color: #ffffff;
+      border-radius: 10px;
+    }
+
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    nav {
+      display: flex;
+      gap: 3rem;
+      align-items: center;
+    }
+
+    nav a {
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+      padding-bottom: 5px;
+    }
+
+    main {
+      max-width: 1600px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+    }
+
+    .page-title {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 3rem;
+      text-align: center;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    h1{
+          text-align: center;
+      color: #ffffff;
+      font-size: 3.5rem;
+    }
+    
+    section {
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(10px);
+      background-color: rgba(215, 203, 203, 0.08);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      
+    }
+
+    section h2 {
+      color: #c2c3c5;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .sim-button {
+      background: #05040d;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 1.2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 255, 0.3);
+    }
+
+    .sim-button:hover {
+      background: linear-gradient(135deg, #2175a3 0%, #050a30 100%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 16px #afdbf5;
+    }
+
+    .descrp{
+      margin: 5rem;
+      font-size: 3rem;
+    }

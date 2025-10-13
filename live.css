@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+
+body {
+    font-family: 'Varela Round', sans-serif;
+    margin: 0;
+    background: linear-gradient(180deg, #050a30, #02224c, #024363);
+    color: #ffffff;
+}
+header {
+    background: rgba(1, 0, 18, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
+    border-radius: 10px;
+}
+
+.logo {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+nav {
+    display: flex;
+    gap: 3rem;
+    align-items: center;
+}
+
+nav a {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+    position: relative;
+}
+
+nav a:hover {
+    text-decoration: underline;
+    padding-bottom: 5px;
+}
+
+
+#container {
+    max-width: 1500px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    /* border-radius: 10px; */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+    text-align: center;
+    color: #ffffff;
+    font-size: 2.5rem;
+}
+
+#canvas-container {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+}
+
+canvas {
+    background: rgba(255, 255, 255, 0.1);
+}
+/* .simCanvas{
+    width:600px;
+    height: 600px;
+}
+.graphCanvas{
+    width:fit-content;
+    height:fit-content;
+} */
+
+#controls {
+    text-align: center;
+    margin: 20px 0;
+}
+
+button {
+    background: #05040d;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    margin: 0 10px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #2175a3 0%, #050a30 100%);
+    transform: translateY(-3px);
+}
+
+#stats {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px 25px;
+    border-radius: 5px;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #c2c3c5;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+#params-box {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin:auto 0;
+}
+
+#params-box label {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+#params-box input {
+    min-width: 80px;
+    max-width: 80px;
+    padding: 8px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    box-sizing: border-box;
+
+}
+
+#params-box input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid #0078d4;
+}
+
+
