@@ -78,6 +78,17 @@ canvas {
     height:fit-content;
 } */
 
+    .color-box {
+        width: 10px;
+        height: 10px;
+        margin-right: 3px;
+        vertical-align: middle;
+    }
+    .stat-label {
+        display: flex;
+        align-items: center;
+    }
+
 #controls {
     text-align: center;
     margin: 20px 0;
